@@ -2,10 +2,394 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "VSTSDemoPlanName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "VSTSDemoPlanSkuName": {
+      "type": "string",
+      "defaultValue": "S1",
+      "allowedValues": [
+        "F1",
+        "D1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "metadata": {
+        "description": "Describes plan's pricing tier and capacity. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+      }
+    },
+    "vstsDeploymentSlots": {
+      "type": "array"
+    },
+
+    "vstsdemosqlserverAdminLogin": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vstsdemosqlserverAdminLoginPassword": {
+      "type": "securestring"
+    },
+    "vstsdemosqldbName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vstsdemosqldbCollation": {
+      "type": "string",
+      "minLength": 1,
+      "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+    },
+    "vstsdemosqldbEdition": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "vstsdemosqldbRequestedServiceObjectiveName": {
+      "type": "string",
+      "defaultValue": "Basic",
+      "allowedValues": [
+        "Basic",
+        "S0",
+        "S1",
+        "S2",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "metadata": {
+        "description": "Describes the performance level for Edition"
+      }
+    },
+    "sqlFireWallRule": {
+      "type": "object"
+    }
 
 
   },
-  "variables": {},
-  "resources": [],
+  "variables": {
+    "VSTSDemoAppName": "[concat('VSTSDemoApp', uniqueString(resourceGroup().id))]",
+    "vstsdemosqlserverName": "[concat('vstsdemosqlserver', uniqueString(resourceGroup().id))]"},
+  "resources": [
+    {
+      "name": "[parameters('VSTSDemoPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "sku": {
+        "name": "[parameters('VSTSDemoPlanSkuName')]"
+      },
+      "dependsOn": [ ],
+      "tags": {
+        "displayName": "VSTSDemoPlan"
+      },
+      "properties": {
+        "name": "[parameters('VSTSDemoPlanName')]",
+        "numberOfWorkers": 1
+      }
+    },
+    {
+      "name": "[variables('VSTSDemoAppName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName')))]": "Resource",
+        "displayName": "VSTSDemoApp"
+      },
+      "properties": {
+        "name": "[variables('VSTSDemoAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "type": "slots",
+          "dependsOn": "[resourceId('Microsoft.Web/sites',variables('VSTSDemoAppName'))]",
+          "copy": {
+            "count": 2,
+            "name": "SlotSetup"
+          },
+          "name": "[parameters('vstsDeploymentSlots')[copyIndex()]]"
+        }
+      ]
+    },
+    {
+      "name": "[variables('vstsdemosqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01-preview",
+      "dependsOn": [ ],
+      "tags": {
+        "displayName": "vstsdemosqlserver"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('vstsdemosqlserverAdminLogin')]",
+        "administratorLoginPassword": "[parameters('vstsdemosqlserverAdminLoginPassword')]"
+      },
+      "resources": [
+        {
+          "name": "AllowAllWindowsAzureIps",
+          "type": "firewallrules",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('vstsdemosqlserverName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "[parameters('sqlFireWallRule').startIpAddress]",
+            "endIpAddress": "[parameters('sqlFireWallRule').endIpAddress]"
+          }
+        },
+        {
+          "name": "[parameters('vstsdemosqldbName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('vstsdemosqlserverName'))]"
+          ],
+          "tags": {
+            "displayName": "vstsdemosqldb"
+          },
+          "properties": {
+            "collation": "[parameters('vstsdemosqldbCollation')]",
+            "edition": "[parameters('vstsdemosqldbEdition')]",
+            "maxSizeBytes": "1073741824",
+            "requestedServiceObjectiveName": "[parameters('vstsdemosqldbRequestedServiceObjectiveName')]"
+          }
+        }
+      ]
+    },
+    {
+      "name": "[concat(parameters('VSTSDemoPlanName'), '-', resourceGroup().name)]",
+      "type": "Microsoft.Insights/autoscalesettings",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName')))]": "Resource",
+        "displayName": "VstsdemoAppInsights AutoScale"
+      },
+      "properties": {
+        "name": "[concat(parameters('VSTSDemoPlanName'), '-', resourceGroup().name)]",
+        "profiles": [
+          {
+            "name": "Default",
+            "capacity": {
+              "minimum": 1,
+              "maximum": 2,
+              "default": 1
+            },
+            "rules": [
+              {
+                "metricTrigger": {
+                  "metricName": "CpuPercentage",
+                  "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT10M",
+                  "timeAggregation": "Average",
+                  "operator": "GreaterThan",
+                  "threshold": 80
+                },
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "ChangeCount",
+                  "value": 1,
+                  "cooldown": "PT10M"
+                }
+              },
+              {
+                "metricTrigger": {
+                  "metricName": "CpuPercentage",
+                  "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]",
+                  "timeGrain": "PT1M",
+                  "statistic": "Average",
+                  "timeWindow": "PT1H",
+                  "timeAggregation": "Average",
+                  "operator": "LessThan",
+                  "threshold": 60
+                },
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "ChangeCount",
+                  "value": 1,
+                  "cooldown": "PT1H"
+                }
+              }
+            ]
+          }
+        ],
+        "enabled": false,
+        "targetResourceUri": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      }
+    },
+    {
+      "name": "[concat('CPUHigh ', parameters('VSTSDemoPlanName'))]",
+      "type": "Microsoft.Insights/alertrules",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName')))]": "Resource",
+        "displayName": "CPUHigh VstsdemoAppInsights"
+      },
+      "properties": {
+        "name": "[concat('CPUHigh ', parameters('VSTSDemoPlanName'))]",
+        "description": "[concat('The average CPU is high across all the instances of ', parameters('VSTSDemoPlanName'))]",
+        "isEnabled": false,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]",
+            "metricName": "CpuPercentage"
+          },
+          "operator": "GreaterThan",
+          "threshold": 90,
+          "windowSize": "PT15M"
+        },
+        "action": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+          "sendToServiceOwners": true,
+          "customEmails": [ ]
+        }
+      }
+    },
+    {
+      "name": "[concat('LongHttpQueue ', parameters('VSTSDemoPlanName'))]",
+      "type": "Microsoft.Insights/alertrules",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName')))]": "Resource",
+        "displayName": "LongHttpQueue VstsdemoAppInsights"
+      },
+      "properties": {
+        "name": "[concat('LongHttpQueue ', parameters('VSTSDemoPlanName'))]",
+        "description": "[concat('The HTTP queue for the instances of ', parameters('VSTSDemoPlanName'), ' has a large number of pending requests.')]",
+        "isEnabled": false,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]",
+            "metricName": "HttpQueueLength"
+          },
+          "operator": "GreaterThan",
+          "threshold": 100,
+          "windowSize": "PT5M"
+        },
+        "action": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+          "sendToServiceOwners": true,
+          "customEmails": [ ]
+        }
+      }
+    },
+    {
+      "name": "[concat('ServerErrors ', 'VstsdemoAppInsights')]",
+      "type": "Microsoft.Insights/alertrules",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
+      ],
+      "tags": {
+        "[concat('hidden-link:', resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName')))]": "Resource",
+        "displayName": "ServerErrors VstsdemoAppInsights"
+      },
+      "properties": {
+        "name": "[concat('ServerErrors ', variables('VSTSDemoAppName'))]",
+        "description": "[concat(variables('VSTSDemoAppName'), ' has some server errors, status code 5xx.')]",
+        "isEnabled": false,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]",
+            "metricName": "Http5xx"
+          },
+          "operator": "GreaterThan",
+          "threshold": 0,
+          "windowSize": "PT5M"
+        },
+        "action": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+          "sendToServiceOwners": true,
+          "customEmails": [ ]
+        }
+      }
+    },
+    {
+      "name": "[concat('ForbiddenRequests ', 'VstsdemoAppInsights')]",
+      "type": "Microsoft.Insights/alertrules",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
+      ],
+      "tags": {
+        "displayName": "ForbiddenRequests VstsdemoAppInsights"
+      },
+      "properties": {
+        "name": "[concat('ForbiddenRequests ', variables('VSTSDemoAppName'))]",
+        "description": "[concat(variables('VSTSDemoAppName'), ' has some requests that are forbidden, status code 403.')]",
+        "isEnabled": false,
+        "condition": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+          "dataSource": {
+            "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+            "resourceUri": "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]",
+            "metricName": "Http403"
+          },
+          "operator": "GreaterThan",
+          "threshold": 0,
+          "windowSize": "PT5M"
+        },
+        "action": {
+          "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+          "sendToServiceOwners": true,
+          "customEmails": [ ]
+        }
+      }
+    },
+    {
+      "name": "VstsdemoAppInsights",
+      "type": "Microsoft.Insights/components",
+      "location": "East US",
+      "apiVersion": "2014-04-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
+      ],
+      "tags": {
+        "displayName": "Component VstsdemoAppInsights"
+      },
+      "properties": {
+        "applicationId": "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
+      }
+    }],
   "outputs": {}
 }
