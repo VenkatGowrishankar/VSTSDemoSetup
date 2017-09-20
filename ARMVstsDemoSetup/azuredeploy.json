@@ -74,12 +74,15 @@
     },
     "sqlFireWallRule": {
       "type": "object"
+    },
+    "sqldbEnvironments": {
+      "type": "array"
     }
 
 
   },
   "variables": {
-    "VSTSDemoAppName": "[concat('VSTSDemoApp', uniqueString(resourceGroup().id))]",
+    "VSTSDemoAppName": "[concat('VSTSDemoAppVeGowris')]",
     "vstsdemosqlserverName": "[concat('vstsdemosqlserver', uniqueString(resourceGroup().id))]"},
   "resources": [
     {
@@ -90,7 +93,7 @@
       "sku": {
         "name": "[parameters('VSTSDemoPlanSkuName')]"
       },
-      "dependsOn": [ ],
+      "dependsOn": [],
       "tags": {
         "displayName": "VSTSDemoPlan"
       },
@@ -116,24 +119,31 @@
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]"
       },
       "resources": [
-        {
-          "apiVersion": "2015-08-01",
-          "type": "slots",
-          "dependsOn": "[resourceId('Microsoft.Web/serverfarms', parameters('VSTSDemoPlanName'))]",
-          "copy": {
-            "count": 2,
-            "name": "SlotSetup"
-          },
-          "name": "[parameters('vstsDeploymentSlots')[copyIndex()]]"
-        }
+
       ]
+    },
+    {
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/sites/slots",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
+      ],
+      "copy": {
+        "count": "[length(parameters('vstsDeploymentSlots'))]",
+        "name": "SlotSetup"
+      },
+      "name": "[concat(variables('VSTSDemoAppName'),'/',parameters('vstsDeploymentSlots')[copyIndex()])]",
+      "properties": {
+        "InstrumentationKey": "[reference(concat('Microsoft.Insights/components/','VstsdemoAppInsights')).InstrumentationKey]"
+      }
     },
     {
       "name": "[variables('vstsdemosqlserverName')]",
       "type": "Microsoft.Sql/servers",
       "location": "[resourceGroup().location]",
       "apiVersion": "2014-04-01-preview",
-      "dependsOn": [ ],
+      "dependsOn": [],
       "tags": {
         "displayName": "vstsdemosqlserver"
       },
@@ -154,27 +164,32 @@
             "startIpAddress": "[parameters('sqlFireWallRule').startIpAddress]",
             "endIpAddress": "[parameters('sqlFireWallRule').endIpAddress]"
           }
-        },
-        {
-          "name": "[parameters('vstsdemosqldbName')]",
-          "type": "databases",
-          "location": "[resourceGroup().location]",
-          "apiVersion": "2014-04-01-preview",
-          "dependsOn": [
-            "[resourceId('Microsoft.Sql/servers', variables('vstsdemosqlserverName'))]"
-          ],
-          "tags": {
-            "displayName": "vstsdemosqldb"
-          },
-          "properties": {
-            "collation": "[parameters('vstsdemosqldbCollation')]",
-            "edition": "[parameters('vstsdemosqldbEdition')]",
-            "maxSizeBytes": "1073741824",
-            "requestedServiceObjectiveName": "[parameters('vstsdemosqldbRequestedServiceObjectiveName')]"
-          }
         }
       ]
     },
+    {
+      "name": "[concat(variables('vstsdemosqlserverName'),'/',parameters('sqldbEnvironments')[copyIndex('DBSetup')])]",
+      "type": "Microsoft.Sql/servers/databases",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "DBSetup",
+        "count": "[length(parameters('sqldbEnvironments'))]"
+      },
+      "apiVersion": "2014-04-01-preview",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('vstsdemosqlserverName'))]"
+      ],
+      "tags": {
+        "displayName": "vstsdemosqldb"
+      },
+      "properties": {
+        "collation": "[parameters('vstsdemosqldbCollation')]",
+        "edition": "[parameters('vstsdemosqldbEdition')]",
+        "maxSizeBytes": "1073741824",
+        "requestedServiceObjectiveName": "[parameters('vstsdemosqldbRequestedServiceObjectiveName')]"
+      }
+    },
+
     {
       "name": "[concat(parameters('VSTSDemoPlanName'), '-', resourceGroup().name)]",
       "type": "Microsoft.Insights/autoscalesettings",
@@ -271,7 +286,7 @@
         "action": {
           "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
           "sendToServiceOwners": true,
-          "customEmails": [ ]
+          "customEmails": []
         }
       }
     },
@@ -305,7 +320,7 @@
         "action": {
           "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
           "sendToServiceOwners": true,
-          "customEmails": [ ]
+          "customEmails": []
         }
       }
     },
@@ -339,7 +354,7 @@
         "action": {
           "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
           "sendToServiceOwners": true,
-          "customEmails": [ ]
+          "customEmails": []
         }
       }
     },
@@ -372,7 +387,7 @@
         "action": {
           "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
           "sendToServiceOwners": true,
-          "customEmails": [ ]
+          "customEmails": []
         }
       }
     },
@@ -390,6 +405,7 @@
       "properties": {
         "applicationId": "[resourceId('Microsoft.Web/sites', variables('VSTSDemoAppName'))]"
       }
-    }],
+    }
+  ],
   "outputs": {}
 }

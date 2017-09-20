@@ -8,15 +8,21 @@
         "endIpAddress": "0.0.0.0"
       }
     },
-    "vstsDeploymentSlots": {"value": ["DEV","QAS"]},
+    "vstsDeploymentSlots": { "value": [ "DEV", "QAS","Staging" ] },
     "VSTSDemoPlanName": {
       "value": "vegowristesvsts"
+    },
+    "sqldbEnvironments": {
+      "value": ["prd","dev","qas","staging"]
     },
     "vstsdemosqlserverAdminLogin": {
       "value": "vegowris"
     },
     "vstsdemosqldbName": {
       "value": "vstsdemodb"
+    },
+    "vstsdemosqlserverAdminLoginPassword": {
+      "value": "Karpagav#2219"
     }
   }
 }
