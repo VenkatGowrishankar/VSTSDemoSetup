@@ -12,9 +12,6 @@
     "VSTSDemoPlanName": {
       "value": "vegowristesvsts"
     },
-    "sqldbEnvironments": {
-      "value": ["prd","dev","qas","staging"]
-    },
     "vstsdemosqlserverAdminLogin": {
       "value": "vegowris"
     },
@@ -22,7 +19,7 @@
       "value": "vstsdemodb"
     },
     "vstsdemosqlserverAdminLoginPassword": {
-      "value": "Karpagav#2219"
+      "value": ""
     }
   }
 }
