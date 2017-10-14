@@ -74,10 +74,11 @@
     },
     "sqlFireWallRule": {
       "type": "object"
-    },
+    }
+    /* DB Removal ,
     "sqldbEnvironments": {
       "type": "array"
-    }
+    }*/
 
 
   },
@@ -167,6 +168,8 @@
         }
       ]
     },
+    /* The DB Creation is handled in the Powershell Script, we are using a BACPAC import
+    to do the operation - DBChanges - VEGOWRIS.
     {
       "name": "[concat(variables('vstsdemosqlserverName'),'/',parameters('sqldbEnvironments')[copyIndex('DBSetup')])]",
       "type": "Microsoft.Sql/servers/databases",
@@ -189,7 +192,7 @@
         "requestedServiceObjectiveName": "[parameters('vstsdemosqldbRequestedServiceObjectiveName')]"
       }
     },
-
+    */
     {
       "name": "[concat(parameters('VSTSDemoPlanName'), '-', resourceGroup().name)]",
       "type": "Microsoft.Insights/autoscalesettings",

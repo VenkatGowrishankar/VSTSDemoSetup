@@ -114,5 +114,8 @@ else {
                                        -ErrorVariable ErrorMessages
     if ($ErrorMessages) {
         Write-Output '', 'Template deployment returned the following errors:', @(@($ErrorMessages) | ForEach-Object { $_.Exception.Message.TrimEnd("`r`n") })
-    }
+    } else{
+	#Code to create the DB's using BACPAC.
+	
+	}
 }
