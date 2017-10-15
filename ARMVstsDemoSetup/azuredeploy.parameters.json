@@ -8,9 +8,21 @@
         "endIpAddress": "0.0.0.0"
       }
     },
-    "vstsDeploymentSlots": { "value": [ "DEV", "QAS","Staging" ] },
+    "vstsDeploymentSlots": { "value": [ "DEV", "QAS", "Staging" ] },
     "VSTSDemoPlanName": {
       "value": "vegowristesvsts"
+    },
+    "VSTSDemoAppName": {
+      "value": "VSTSDemoAppVeGowristest"
+    },
+    "storageAccount": {
+      "value": "vstsdemobacpac1"
+    },
+    "storageUri": {
+      "value": "https://vstsdemobacpac1.blob.core.windows.net/dbexport/dbDraftLottery-2017-9-22-17-24%20(2).bacpac"
+    },
+    "VSTSDemoSqlServerName": {
+      "value": "vstsdemosqlserver"
     },
     "vstsdemosqlserverAdminLogin": {
       "value": "vegowris"
@@ -20,6 +32,9 @@
     },
     "vstsdemosqlserverAdminLoginPassword": {
       "value": ""
+    },
+    "sqldbname": {
+      "value": [ "dev", "qas", "stg", "prd" ]
     }
   }
 }

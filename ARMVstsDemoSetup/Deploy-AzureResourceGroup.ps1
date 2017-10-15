@@ -114,8 +114,31 @@ else {
                                        -ErrorVariable ErrorMessages
     if ($ErrorMessages) {
         Write-Output '', 'Template deployment returned the following errors:', @(@($ErrorMessages) | ForEach-Object { $_.Exception.Message.TrimEnd("`r`n") })
-    } else{
-	#Code to create the DB's using BACPAC.
-	
+    } 	
+#Code to create the DB's using BACPAC.
+# Read the Template File. 
+	  Write-Output "Starting upload of BACPAC Files"
+	  $templateObj = Get-Content $TemplateParametersFile | ConvertFrom-Json
+# Loop and create the BACPAC Files.
+	$cred = Get-Credential
+
+	for($i=0;$i -lt ($templateObj.parameters.sqldbname.value.count);$i++){
+
+	New-AzureRmSqlDatabaseImport -DatabaseName $templateObj.parameters.sqldbname.value[$i] `
+	-Edition                      "Standard" `
+	-DatabaseMaxSizeBytes         '1000000'  `
+	-ServiceObjectiveName         'S1' `
+	-ResourceGroupName            $ResourceGroupName `
+	-ServerName                   $templateObj.parameters.VSTSDemoSqlServerName.value `
+	-AdministratorLogin           $cred.userName `
+	-AdministratorLoginPassword   $cred.password `
+	-StorageKeyType               "StorageAccessKey" `
+	-StorageKey                   $(Get-AzureRmStorageAccountKey -ResourceGroupName $ResourceGroupName -StorageAccountName $templateObj.parameters.storageAccount.value).Value[0] `
+	-StorageUri                  $templateObj.parameters.storageUri.value `
+	-Verbose `
+
+
+
+
 	}
 }
