@@ -43,43 +43,6 @@
     "vstsdemosqlserverAdminLoginPassword": {
       "type": "securestring"
     },
-    "vstsdemosqldbName": {
-      "type": "string",
-      "minLength": 1
-    },
-    "vstsdemosqldbCollation": {
-      "type": "string",
-      "minLength": 1,
-      "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
-    },
-    "vstsdemosqldbEdition": {
-      "type": "string",
-      "defaultValue": "Basic",
-      "allowedValues": [
-        "Basic",
-        "Standard",
-        "Premium"
-      ]
-    },
-    "vstsdemosqldbRequestedServiceObjectiveName": {
-      "type": "string",
-      "defaultValue": "Basic",
-      "allowedValues": [
-        "Basic",
-        "S0",
-        "S1",
-        "S2",
-        "P1",
-        "P2",
-        "P3"
-      ],
-      "metadata": {
-        "description": "Describes the performance level for Edition"
-      }
-    },
-    "sqlFireWallRule": {
-      "type": "object"
-    },
     "sqlDbName": {
       "type": "array"
     },
